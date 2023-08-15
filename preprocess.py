@@ -66,7 +66,7 @@ if __name__ == "__main__":
     test_path = os.path.join(__PATH__, "test")
     if not os.path.exists(test_path):
         os.mkdir(test_path)
-    # !测试集图片需要保存一个编号列表，用于测试阶段
+    # !测试集图片需要保存文件路径，在生成哈希码的时候建立*码->图片*的索引，方便检索找到原始文件
     test_path_txt = open(os.path.join(test_path, "test_path.txt"), 'a')
     print("reading test set...")
     p2 = progressbar.ProgressBar()
