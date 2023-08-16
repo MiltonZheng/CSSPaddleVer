@@ -50,18 +50,25 @@ if __name__ == "__main__":
     # 生成一个随机访问序列
     order = np.arange(total_num)
     np.random.shuffle(order)
-    p1 = progressbar.ProgressBar()
+    train_path = os.path.join(__PATH__, "train")
+    if not os.path.exists(train_path):
+        os.mkdir(train_path)
+    # ! 这里主要是为了手动验证正确性，实际并不需要这个索引
+    train_path_txt = open(os.path.join(train_path, "train_path.txt"), 'a')
     print("reading training set...")
+    p1 = progressbar.ProgressBar()
     for i in p1(order[:25000]):
-        img, label, _ = read_1_image_n_label(i)
+        img, label, path = read_1_image_n_label(i)
         train_image.append(img)
         train_label.append(label)
+        train_path_txt.write(os.path.abspath(path) + "\n")
+    train_path_txt.close()
 
     train_image = np.reshape(train_image, [train_num, 256, 256, 3])
     train_label = np.reshape(train_label, [train_num])
     print("training set size:", train_image.shape, train_label.shape)
     print("storing data:")
-    utils.cvt_2_h5py(train_image, train_label, os.path.join(__PATH__, "train"), [256, 256, 3])
+    utils.cvt_2_h5py(train_image, train_label, train_path)
 
     test_path = os.path.join(__PATH__, "test")
     if not os.path.exists(test_path):
@@ -80,5 +87,5 @@ if __name__ == "__main__":
     test_label = np.reshape(test_label, [test_num])
     print("test set size:", test_image.shape, test_label.shape)
     print("storing data:")
-    utils.cvt_2_h5py(test_image, test_label, test_path, [256, 256, 3])
+    utils.cvt_2_h5py(test_image, test_label, test_path)
     
