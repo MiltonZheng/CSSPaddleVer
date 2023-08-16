@@ -21,11 +21,11 @@ def load_hy(path):
         return data
 
 
-def cvt_2_h5py(image, label, data_dir, shape=None):
+def cvt_2_h5py(image, label, data_dir):
     """
     将图片和标签保存在同一个h5py文件中
-    文件逻辑结构：先按照每张图片对应的内容和标签分为若干个group
-    每一个group中包含image和label数据
+    !(已更改)文件逻辑结构：先按照每张图片对应的内容和标签分为若干个group，每一个group中包含image和label数据
+    *结构已更改为图片和标签分别存在两个dataset当中。
     :param image: 图像
     :param label: 标签
     :param data_dir: 存储路径
@@ -40,13 +40,7 @@ def cvt_2_h5py(image, label, data_dir, shape=None):
         os.mkdir(data_dir)
     f = h5py.File(os.path.join(data_dir, 'data.hy'), 'w')
     p = progressbar.ProgressBar()
-    for i in p(range(image.shape[0])):
-        grp = f.create_group(str(i))
-        # 把图片按指定shape进行reshape，其中order='F'表示优先按列的维度进行索引
-        if shape:
-            grp['image'] = np.reshape(image[i], shape, order='F')
-        else:
-            grp['image'] = image[i]
-        grp['label'] = label[i]
+    f['image'] = image
+    f['label'] = label
     f.close()
     return
