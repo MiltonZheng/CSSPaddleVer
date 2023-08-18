@@ -2,7 +2,6 @@ import numpy as np
 import paddle
 import h5py
 import os
-import progressbar
 
 
 # 加载hy文件
@@ -41,7 +40,6 @@ def cvt_2_h5py(image, label, data_dir):
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
     f = h5py.File(os.path.join(data_dir, 'data.hy'), 'w')
-    p = progressbar.ProgressBar()
     f['image'] = image
     f['label'] = label
     f.close()

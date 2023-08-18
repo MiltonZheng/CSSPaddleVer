@@ -4,7 +4,6 @@ import numpy as np
 import math
 from matplotlib import pyplot as plt
 import cv2
-import progressbar
 from tqdm import tqdm
 
 
@@ -56,7 +55,7 @@ if __name__ == "__main__":
         os.mkdir(train_path)
     # ! 这里主要是为了验证正确性，实际并不需要这个索引
     train_path_txt = open(os.path.join(train_path, "train_path.txt"), 'a')
-    for i in tqdm(order[:25000], desc = "reading training set"):
+    for i in tqdm(order[:25000], desc="reading training set"):
         img, label, path = read_1_image_n_label(i)
         train_image.append(img)
         train_label.append(label)
@@ -74,7 +73,7 @@ if __name__ == "__main__":
         os.mkdir(test_path)
     # !测试集图片需要保存文件路径，在生成哈希码的时候建立*码->图片*的索引，方便检索找到原始文件
     test_path_txt = open(os.path.join(test_path, "test_path.txt"), 'a')
-    for i in tqdm(order[25000:31500], desc = "reading test set"):
+    for i in tqdm(order[25000:31500], desc="reading test set"):
         img, label, path = read_1_image_n_label(i)
         test_image.append(img)
         test_label.append(label)
