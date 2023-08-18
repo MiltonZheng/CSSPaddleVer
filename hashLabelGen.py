@@ -2,8 +2,9 @@ import utils
 import os
 import h5py
 import paddle
-from matplotlib import pyplot as plt
 from dataset import MyDataset
+from tqdm import tqdm
+import numpy as np
 
 
 __PATH__ = "../datasets/NWPU-RESISC45/train"
@@ -13,27 +14,29 @@ try:
 except:
     raise IOError('Dataset not found. Please make sure the dataset was downloaded.')
 
-train_image = h5data['imgae'][()]
+train_image = h5data['image'][()]
 train_label = h5data['label'][()]
 train_set = MyDataset(train_image, train_label)
 
 # 定义并初始化数据读取器
-train_loader = paddle.io.DataLoader(train_set, batch_size=64, shuffle=True, num_workers=1, drop_last=True)
-
+# !DataLoader会把数据打乱
+train_loader = paddle.io.DataLoader(train_set, batch_size=64, shuffle=True, num_workers=1, drop_last=False)
+vgg16 = paddle.vision.models.vgg16(pretrained=True)
+features = []
 # 调用 DataLoader 迭代读取数据
-for batch_id, data in enumerate(train_loader()):
+for batch_id, data in enumerate(tqdm(train_loader(), desc="extract feature")):
     images, labels = data
-    print("batch_id: {}, 训练数据shape: {}, 标签数据shape: {}".format(batch_id, images.shape, labels))
-    break
+    # *网络输入维度要求为[3,256,256]，而imread读取时存储为[256,256,3]，所以此处需要进行转置。
+    # *但是2,3维顺序是否正确，或者有没有影响还未知
+    # *图片输入网络前需要先转换为float32
+    images = paddle.transpose(images.astype('float32'), perm=[0,3,1,2])
+    feature = vgg16(images)
+    # features.extend(feature)
+    print("batch_id: {}, 训练数据shape: {}, 标签数据shape: {}".format(batch_id, images.shape, labels.shape))
 
-print(h5data['label'][()][0])
-img = h5data['image'][()][0]
-plt.imshow(img)
-plt.show()
+# features = np.asarray(features, dtype = np.float32)
+# print(features.shape)
+# featuresh5py = h5py.File(os.path.join(__PATH__, 'features.hy'), 'w')
+# featuresh5py.create_dataset("features", data=features)
+# featuresh5py.close()
 
-
-# # 调用内置vgg16模型
-# vgg16 = paddle.vision.models.vgg16(pretrained=True)
-# input = paddle.rand([5, 3, 224, 224])
-# output = vgg16(input)
-# print(output.shape)

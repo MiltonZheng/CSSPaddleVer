@@ -33,6 +33,8 @@ def cvt_2_h5py(image, label, data_dir):
     :return:
     """
     # 拼接样本和标签
+    # *灰度值只有256个取值，所以8位就够。
+    # *标签此处也转换为了uint8，但是当类别多于256时不适合。
     image = image.astype(np.uint8)
     label = label.astype(np.uint8)
 
