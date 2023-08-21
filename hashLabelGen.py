@@ -2,7 +2,7 @@
 Author: MiltonZheng zheng12238@gmail.com
 Date: 2023-08-18 10:25:31
 LastEditors: MiltonZheng zheng12238@gmail.com
-LastEditTime: 2023-08-18 16:33:27
+LastEditTime: 2023-08-21 09:14:25
 FilePath: \CSSPaddleVer\hashLabelGen.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -31,7 +31,7 @@ def build_data_loader(filepath):
     train_set = MyDataset(train_image, train_label)
 
     # define & initialize the data loader
-    train_loader = paddle.io.DataLoader(train_set, batch_size=32, shuffle=True, num_workers=1, drop_last=False)
+    train_loader = paddle.io.DataLoader(train_set, batch_size=32, shuffle=True, num_workers=0, drop_last=False)
     return train_loader
 
 
@@ -43,7 +43,7 @@ def extract_feature(data_loader, filepath):
     features = []
     # call the DataLoader to read data iteratively
     for batch_id, data in enumerate(tqdm(data_loader(), desc="extracting feature")):
-        images, labels = data
+        images, _ = data
         # *The model requires the input dimension to be [3, height, width]
         # *but imread reads images as [width, height, 3], so the data needs to be transposed
         images = paddle.transpose(images.astype('float32'), perm=[0,3,1,2])
@@ -54,7 +54,7 @@ def extract_feature(data_loader, filepath):
 
     # store the features as hy file
     features = np.asarray(features)
-    print("feature sieze:{}".format(features.shape))
+    print("feature size:{}".format(features.shape))
     features_h5 = h5py.File(os.path.join(filepath, 'features.hy'), 'w')
     features_h5.create_dataset("features", data=features)
     features_h5.close()
@@ -74,7 +74,9 @@ def create_hashtags(filepath, bits=48, nei=10):
 if __name__ == "__main__":
     path = "../datasets/NWPU-RESISC45/train"
     data_loader = build_data_loader(filepath=path)
-    extract_feature(data_loader, filepath=path)
+    
+    extract_feature(data_loader=data_loader, filepath=path)
+    
     hashtags = create_hashtags(filepath=path)
     print("storing hashtags...")
     hashtags_h5 = h5py.File(os.path.join(path, 'hashtags.hy'), 'w')
