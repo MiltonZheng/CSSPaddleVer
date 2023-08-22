@@ -1,7 +1,9 @@
 import numpy as np
-import paddle
+from paddle.vision.transforms import Resize
 import h5py
 import os
+from tqdm import tqdm
+from dataset import MyDataset
 
 
 # 加载hy文件
@@ -44,3 +46,31 @@ def cvt_2_h5py(image, label, data_dir):
     f['label'] = label
     f.close()
     return
+
+def build_trainset(filepath):
+    '''
+    # *build a dataloader using paddlepaddle
+    this one is different from the the one in hashLabelGen.py
+    In hashLabelGen.py, we only need the images to extract features
+    but we need both images and labels(hashtags) to train the model
+    so we need to use the hashtags as pseudo labels here
+    These two could be written in one file, but I think it's better to keep them separate
+    So it's less confusing
+    '''
+    try:
+        h5data = h5py.File(os.path.join(filepath, "data.hy"), 'r')
+        hashtagsH5 = h5py.File(os.path.join(filepath, "hashtags.hy"), 'r')
+    except:
+        raise IOError('Dataset not found. Please make sure the dataset is stored in the right directory.')
+
+    train_image = h5data['image'][()]
+    
+    
+    # *The model requires the input dimension to be [3, height, width]
+    # *but imread reads images as [width, height, 3], so the data needs to be transposed
+    # *also it needs to be converted to float32
+    train_image = np.transpose(train_image.astype('float32'), (0, 3, 1, 2))
+    train_label = hashtagsH5['hashtags'][()].astype('float32')
+    
+    train_set = MyDataset(train_image, train_label)
+    return train_set

@@ -1,13 +1,14 @@
 from paddle import nn
 import paddle
+from paddle.vision.transforms import Resize
 
 class DSTH(nn.Layer):
-    def __init__(self, height = 256, width = 256, channel = 3, label = None):
+    def __init__(self, height = 256, width = 256, channel = 3, batch_size = 64):
         super().__init__()
         self.input_height = height
         self.input_width = width
         self.input_channel = channel
-        self.label = label
+        self.batch_size = batch_size
         self.features = nn.Sequential(
             nn.Conv2D(self.input_channel, 32, 5, stride=1, padding=2),
             nn.MaxPool2D(kernel_size=3, stride=2, padding=0),
@@ -29,6 +30,12 @@ class DSTH(nn.Layer):
             )
         
     def forward(self, x):
+        transform = Resize((self.input_height, self.input_width))
+        x_transformed = paddle.to_tensor(paddle.zeros([self.batch_size, self.input_channel, 
+                                                       self.input_height, self.input_width]))
+        for i in range(x.shape[0]):
+            x_transformed[i] = transform(x[i])
+        x = x_transformed
         features = self.features(x)
         features = paddle.reshape(features, [-1, 1, 64*self.f_height*self.f_width])
         linear = self.linear(features)
@@ -36,10 +43,18 @@ class DSTH(nn.Layer):
         for i in range(16):
             slice1 = paddle.slice(linear, axes=[2], starts=[256*i], ends=[256*(i+1)])
             slice2 = self.slice(slice1)
-            paddle.concat([logits, slice2], axis=2)
-        loss = nn.functional.cross_entropy(logits, self.label)
+            logits = paddle.concat(x=[logits, slice2], axis=2)
+        logits = paddle.reshape(logits, [-1, 48])
         return logits
 
+class loss(nn.Layer):
+    def __init__(self):
+        super().__init__()
+        
+    def forward(self, logits, label):
+        loss = paddle.nn.functional.pairwise_distance(logits, label)
+        loss = paddle.mean(loss)
+        return loss
 
 
 

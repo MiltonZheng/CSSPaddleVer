@@ -16,7 +16,7 @@ from sklearn import decomposition
 from sklearn import manifold
 
 
-def build_data_loader(filepath):
+def build_dataset(filepath):
     '''
     build a dataloader using paddlepaddle
     '''
@@ -27,26 +27,26 @@ def build_data_loader(filepath):
         raise IOError('Dataset not found. Please make sure the dataset is stored in the right directory.')
 
     train_image = h5data['image'][()]
+    # *The model requires the input dimension to be [3, height, width]
+    # *but imread reads images as [width, height, 3], so the data needs to be transposed
+    # *also it needs to be converted to float32
+    train_image = np.transpose(train_image.astype('float32'), (0, 3, 1, 2))
     train_label = h5data['label'][()]
     train_set = MyDataset(train_image, train_label)
 
-    # define & initialize the data loader
-    train_loader = paddle.io.DataLoader(train_set, batch_size=32, shuffle=True, num_workers=1, drop_last=False)
-    return train_loader
+    return train_set
 
-
-def extract_feature(data_loader, filepath):
+def extract_feature(train_set, filepath):
     '''
     extract and store features using vgg16
     '''    
+    # define & initialize the data loader
+    data_loader = paddle.io.DataLoader(train_set, batch_size=32, shuffle=True, num_workers=1, drop_last=False)
     vgg16 = paddle.vision.models.vgg16(pretrained=True)
     features = []
     # call the DataLoader to read data iteratively
     for batch_id, data in enumerate(tqdm(data_loader(), desc="extracting feature")):
         images, labels = data
-        # *The model requires the input dimension to be [3, height, width]
-        # *but imread reads images as [width, height, 3], so the data needs to be transposed
-        images = paddle.transpose(images.astype('float32'), perm=[0,3,1,2])
         feature = vgg16(images)
         # !remember to move the extracted features from gpu memory to main memory or gpu memory will run out
         feature = paddle.Tensor(feature).detach().cpu().numpy()
@@ -73,8 +73,8 @@ def create_hashtags(filepath, bits=48, nei=10):
 
 if __name__ == "__main__":
     path = "../datasets/NWPU-RESISC45/train"
-    data_loader = build_data_loader(filepath=path)
-    extract_feature(data_loader, filepath=path)
+    train_set = build_dataset(path)
+    extract_feature(train_set, filepath=path)
     hashtags = create_hashtags(filepath=path)
     print("storing hashtags...")
     hashtags_h5 = h5py.File(os.path.join(path, 'hashtags.hy'), 'w')
