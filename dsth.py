@@ -22,11 +22,11 @@ class DSTH(nn.Layer):
         self.f_height = int((int((self.input_height-1)/2)-1)/2)
         self.f_width = int((int((self.input_width-1)/2)-1)/2)
         self.linear = nn.Sequential(
-            nn.Linear(64*self.f_height*self.f_width, 4096),
+            nn.Linear(64*self.f_height*self.f_width, 512),
             )
         self.slice = nn.Sequential(
+            nn.Linear(512, 48),
             nn.BatchNorm(1, momentum=0.9, epsilon=1e-5),
-            nn.Linear(256, 3),
             )
         
     def forward(self, x):
@@ -39,12 +39,13 @@ class DSTH(nn.Layer):
         features = self.features(x)
         features = paddle.reshape(features, [-1, 1, 64*self.f_height*self.f_width])
         linear = self.linear(features)
-        logits = paddle.to_tensor([])
-        for i in range(16):
-            slice1 = paddle.slice(linear, axes=[2], starts=[256*i], ends=[256*(i+1)])
-            slice2 = self.slice(slice1)
-            logits = paddle.concat(x=[logits, slice2], axis=2)
-        logits = paddle.reshape(logits, [-1, 48])
+        logits = self.slice(linear)
+        # logits = paddle.to_tensor([])
+        # for i in range(16):
+        #     slice1 = paddle.slice(linear, axes=[2], starts=[256*i], ends=[256*(i+1)])
+        #     slice2 = self.slice(slice1)
+        #     logits = paddle.concat(x=[logits, slice2], axis=2)
+        # logits = paddle.reshape(logits, [-1, 48])
         return logits
 
 class loss(nn.Layer):
@@ -58,8 +59,8 @@ class loss(nn.Layer):
 
 
 
-# h, w, c = [256, 256, 3]
-# batch_size = 64
-# dsthModel = DSTH(h, w, c)
-# params_info = paddle.summary(dsthModel, (batch_size, c, h, w))
-# print(params_info)
+h, w, c = [32, 32, 3]
+batch_size = 64
+dsthModel = DSTH(h, w, c, batch_size)
+params_info = paddle.summary(dsthModel, (batch_size, c, 256, 256))
+print(params_info)

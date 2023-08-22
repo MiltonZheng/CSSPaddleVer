@@ -63,14 +63,14 @@ def build_trainset(filepath):
     except:
         raise IOError('Dataset not found. Please make sure the dataset is stored in the right directory.')
 
-    train_image = h5data['image'][()]
+    train_image = h5data['image'][()][0:16]
     
     
     # *The model requires the input dimension to be [3, height, width]
     # *but imread reads images as [width, height, 3], so the data needs to be transposed
     # *also it needs to be converted to float32
     train_image = np.transpose(train_image.astype('float32'), (0, 3, 1, 2))
-    train_label = hashtagsH5['hashtags'][()].astype('float32')
+    train_label = hashtagsH5['hashtags'][()][0:16].astype('float32')
     
     train_set = MyDataset(train_image, train_label)
     return train_set
