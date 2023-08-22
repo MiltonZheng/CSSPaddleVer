@@ -78,7 +78,7 @@ if __name__ == "__main__":
     hashtags = create_hashtags(filepath=path)
     print("storing hashtags...")
     hashtags_h5 = h5py.File(os.path.join(path, 'hashtags.hy'), 'w')
-    hashtags_h5.create_dataset("hashtagss", data=hashtags)
+    hashtags_h5.create_dataset("hashtags", data=hashtags)
     hashtags_h5.close()
     sum = np.sum(hashtags, axis=0)
     print(sum)
