@@ -1,6 +1,49 @@
+from paddle import nn
 import paddle
+from paddle.vision.transforms import Resize
 import numpy as np
 from paddle.vision.transforms import Normalize
+
+class TestNet(nn.Layer):
+    def __init__(self, height = 256, width = 256, channel = 3):
+        super().__init__()
+        self.input_height = height
+        self.input_width = width
+        self.input_channel = channel
+        self.features = nn.Sequential(
+            nn.Conv2D(self.input_channel, 6, 5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool2D(kernel_size=2, stride=2),
+            nn.Conv2D(6, 16, 5, stride=1, padding=0),
+            nn.ReLU(),
+            nn.MaxPool2D(kernel_size=2, stride=2),
+            nn.Flatten(),
+            nn.Linear(400, 120),
+            nn.Linear(120, 84),
+            nn.Linear(84, 10),
+        )
+        
+    def forward(self, x):
+        features = self.features(x)
+        return features
+
+class loss(nn.Layer):
+    def __init__(self):
+        super().__init__()
+        
+    def forward(self, x, label):
+        # loss = paddle.nn.functional.pairwise_distance(x, paddle.cast(label, dtype='float32'))
+        loss = paddle.nn.functional.cross_entropy(x, label)
+        # loss = paddle.mean(loss)
+        return loss
+
+
+
+h, w, c = [28, 28, 1]
+batch_size = 1
+testModel = TestNet(h, w, c)
+params_info = paddle.summary(testModel, (batch_size, c, 28, 28))
+print(params_info)
 
 transform = Normalize(mean=[127.5], std=[127.5], data_format='CHW')
 # 下载数据集并初始化 DataSet
@@ -8,12 +51,11 @@ train_dataset = paddle.vision.datasets.MNIST(mode='train', transform=transform)
 test_dataset = paddle.vision.datasets.MNIST(mode='test', transform=transform)
 
 # 模型组网并初始化网络
-lenet = paddle.vision.models.LeNet(num_classes=10)
-model = paddle.Model(lenet)
+model = paddle.Model(testModel)
 
 # 模型训练的配置准备，准备损失函数，优化器和评价指标
 model.prepare(paddle.optimizer.Adam(parameters=model.parameters()), 
-              paddle.nn.CrossEntropyLoss(),
+              loss(),
               paddle.metric.Accuracy())
 
 # 模型训练

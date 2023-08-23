@@ -1,66 +1,71 @@
 from paddle import nn
 import paddle
 from paddle.vision.transforms import Resize
+import numpy as np
+from paddle.vision.transforms import Normalize
 
 class DSTH(nn.Layer):
-    def __init__(self, height = 256, width = 256, channel = 3, batch_size = 64):
+    def __init__(self, height = 256, width = 256, channel = 3):
         super().__init__()
         self.input_height = height
         self.input_width = width
         self.input_channel = channel
-        self.batch_size = batch_size
+        # * 此处计算卷积层和池化层的输出大小
+        # * 具体计算随着池化层和卷积层的变化而变化
+        self.f_height = int((int((self.input_height-1)/2)-1)/2)
+        self.f_width = int((int((self.input_width-1)/2)-1)/2)
+        
         self.features = nn.Sequential(
             nn.Conv2D(self.input_channel, 32, 5, stride=1, padding=2),
-            nn.MaxPool2D(kernel_size=3, stride=2, padding=0),
+            nn.MaxPool2D(kernel_size=3, stride=2),
             nn.Conv2D(32, 32, 5, stride=1, padding=2),
-            nn.AvgPool2D(kernel_size=3, stride=2, padding=0),
+            nn.AvgPool2D(kernel_size=3, stride=2),
             nn.Conv2D(32, 64, 5, stride=1, padding=2),
             nn.BatchNorm(64, momentum=0.9, epsilon=1e-5),
             nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(2304, 512),
+            nn.Linear(512, 10),
+            nn.BatchNorm(10, momentum=0.9, epsilon=1e-5),
         )
-        # * 此处计算feature子网络的输出特征图的高度和宽度
-        self.f_height = int((int((self.input_height-1)/2)-1)/2)
-        self.f_width = int((int((self.input_width-1)/2)-1)/2)
-        self.linear = nn.Sequential(
-            nn.Linear(64*self.f_height*self.f_width, 512),
-            )
-        self.slice = nn.Sequential(
-            nn.Linear(512, 48),
-            nn.BatchNorm(1, momentum=0.9, epsilon=1e-5),
-            )
         
     def forward(self, x):
-        transform = Resize((self.input_height, self.input_width))
-        x_transformed = paddle.to_tensor(paddle.zeros([self.batch_size, self.input_channel, 
-                                                       self.input_height, self.input_width]))
-        for i in range(x.shape[0]):
-            x_transformed[i] = transform(x[i])
-        x = x_transformed
         features = self.features(x)
-        features = paddle.reshape(features, [-1, 1, 64*self.f_height*self.f_width])
-        linear = self.linear(features)
-        logits = self.slice(linear)
-        # logits = paddle.to_tensor([])
-        # for i in range(16):
-        #     slice1 = paddle.slice(linear, axes=[2], starts=[256*i], ends=[256*(i+1)])
-        #     slice2 = self.slice(slice1)
-        #     logits = paddle.concat(x=[logits, slice2], axis=2)
-        # logits = paddle.reshape(logits, [-1, 48])
-        return logits
+        return features
 
 class loss(nn.Layer):
     def __init__(self):
         super().__init__()
         
-    def forward(self, logits, label):
-        loss = paddle.nn.functional.pairwise_distance(logits, label)
-        loss = paddle.mean(loss)
+    def forward(self, x, label):
+        loss = paddle.nn.functional.cross_entropy(x, label)
+        # loss = paddle.mean(loss)
         return loss
 
 
 
-h, w, c = [32, 32, 3]
-batch_size = 64
-dsthModel = DSTH(h, w, c, batch_size)
-params_info = paddle.summary(dsthModel, (batch_size, c, 256, 256))
+h, w, c = [28, 28, 1]
+batch_size = 1
+dsthModel = DSTH(h, w, c)
+params_info = paddle.summary(dsthModel, (batch_size, c, 28, 28))
 print(params_info)
+
+path = "../datasets/NWPU-RESISC45/train"
+
+transform = Normalize(mean=[127.5], std=[127.5], data_format='CHW')
+# 下载数据集并初始化 DataSet
+train_set = paddle.vision.datasets.MNIST(mode='train', transform=transform)
+
+model = paddle.Model(dsthModel)
+# 为模型训练做准备，设置优化器及其学习率，并将网络的参数传入优化器，设置损失函数和精度计算方式
+model.prepare(optimizer=paddle.optimizer.Adam(parameters=model.parameters()), 
+              loss=loss(), 
+              metrics=paddle.metric.Accuracy())
+
+# train_set = utils.build_trainset(path)
+
+# 启动模型训练，指定训练数据集，设置训练轮次，设置每次数据集计算的批次大小，设置日志格式
+model.fit(train_set, 
+          epochs=5, 
+          batch_size=64,
+          verbose=1)
