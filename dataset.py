@@ -23,7 +23,7 @@ class MyDataset(Dataset):
         """
         # 根据索引，从列表中取出一个图像
         image, label = self.data_list[index]
-        label = int(label)
+        # label = int(label)
         # 返回图像和对应标签
         return image, label
 

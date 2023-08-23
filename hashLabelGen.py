@@ -73,10 +73,6 @@ def create_hashtags(filepath, bits=48, nei=10):
 
 if __name__ == "__main__":
     path = "../datasets/NWPU-RESISC45/train"
-    data_loader = build_data_loader(filepath=path)
-    
-    extract_feature(data_loader=data_loader, filepath=path)
-    
     train_set = build_dataset(path)
     extract_feature(train_set, filepath=path)
     hashtags = create_hashtags(filepath=path)
