@@ -21,12 +21,12 @@ class DSTH(nn.Layer):
             nn.Conv2D(32, 32, 5, stride=1, padding=2),
             nn.AvgPool2D(kernel_size=3, stride=2),
             nn.Conv2D(32, 64, 5, stride=1, padding=2),
-            nn.BatchNorm(64, momentum=0.9, epsilon=1e-5),
+            # nn.BatchNorm(64, momentum=0.9, epsilon=1e-5),
             nn.ReLU(),
             nn.Flatten(),
             nn.Linear(2304, 512),
             nn.Linear(512, 10),
-            nn.BatchNorm(10, momentum=0.9, epsilon=1e-5),
+            # nn.BatchNorm(10, momentum=0.9, epsilon=1e-5),
         )
         
     def forward(self, x):
