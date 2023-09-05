@@ -35,24 +35,17 @@ class DSTH(nn.Layer):
             nn.ReLU(),
             nn.Flatten(),
             nn.Linear(64*self.f_height*self.f_width, 4096),
-            nn.Linear(4096, 512),
-            nn.Linear(512, 48)
+            # nn.Linear(4096, 512),
+            # nn.Linear(512, 48)
         )
         self.slice = nn.Sequential(
             nn.Linear(256, 3),
             nn.BatchNorm(3, momentum=0.9, epsilon=1e-5)
         )
-        self.testNet = nn.Sequential(
-            nn.Conv2D(self.input_channel, 32, 5, stride=1, padding=2),
-            nn.MaxPool2D(kernel_size=3, stride=2),
-            nn.Flatten(),
-            nn.Linear(32*15*15, 48),
-        )
         
     @paddle.jit.to_static    
     def forward(self, x):
-        features = self.testNet(x)
-        return features
+        features = self.features(x)
         # * sliceNet
         # * the output from previous layer, or input of this subnet, is divided equally into 16 parts
         # * each part is responsible for 3 dimensions of the final output
@@ -64,49 +57,3 @@ class DSTH(nn.Layer):
             output = paddle.concat([output, feature_x], axis=-1)
         return output
 
-
-# logwriter = LogWriter(logdir='./output/dsth_experiment')
-# ! h and w control the input size of the model
-# ! all the input images will be resized to this size
-h, w, c = [64, 64, 3]
-batch_size = 64
-EPOCH_NUM = 100
-dsthModel = DSTH(h, w, c)
-# * print the structural information of the model
-print(paddle.summary(dsthModel, (batch_size, c, h, w)))
-
-path = "../datasets/NWPU-RESISC45/train"
-train_set = utils.build_trainset(path)
-data_loader = paddle.io.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
-opt = paddle.optimizer.Adam(learning_rate=0.0002, parameters=dsthModel.parameters())
-avg_loss = 0.0
-for epoch_id in range(EPOCH_NUM):
-    for batch_id, data in enumerate(tqdm(data_loader(), 
-                                         desc="Epoch {}/{} [loss: {:.7f}]".format(epoch_id, EPOCH_NUM, float(avg_loss)))):
-        images, labels = data
-        
-        # * resize the data
-        # * also it needs to be converted into float32
-        # * Instead of transforming the data type  when building the data loader,
-        # * we do this when we actually load a data batch, so the data won't take up too much space
-        images_t = paddle.zeros([images.shape[0], c, h, w])
-        for i in range(images.shape[0]):
-            images_t[i] = Resize((h, w))(images[i]).astype("float32")
-        images = images_t
-        labels = labels.astype('float32')
-        
-        predicts = dsthModel(images)
-        # * compute the loss
-        loss = paddle.nn.functional.pairwise_distance(predicts, paddle.cast(labels, dtype='float32'))
-        avg_loss = paddle.mean(loss)
-        # CrossEntropyLoss = paddle.nn.CrossEntropyLoss(soft_label=True)
-        # avg_loss = CrossEntropyLoss(predicts, labels)
-        
-        # * back propagation
-        avg_loss.backward()
-        opt.step()
-        opt.clear_grad()
-
-# * save
-path = "./output/dsth"
-paddle.jit.save(dsthModel, path)

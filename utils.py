@@ -71,3 +71,17 @@ def build_trainset(filepath):
     
     train_set = MyDataset(train_image, train_label)
     return train_set
+
+
+def build_testset(filepath):
+    try:
+        h5data = h5py.File(os.path.join(filepath, "data.hy"), 'r')
+    except:
+        raise IOError('Dataset not found. Please make sure the dataset is stored in the right directory.')
+    
+    test_image = h5data['image'][()]
+    test_image = np.transpose(test_image, (0, 3, 1, 2))
+    test_label = h5data['label'][()]
+    
+    train_set = MyDataset(test_image, test_label)
+    return train_set

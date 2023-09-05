@@ -32,8 +32,3 @@ class MyDataset(Dataset):
         实现 __len__ 函数，返回数据集的样本总数
         """
         return len(self.data_list)
-
-# # 打印数据集样本数        
-# train_custom_dataset = MyDataset('mnist/train','mnist/train/label.txt')
-# test_custom_dataset = MyDataset('mnist/val','mnist/val/label.txt')
-# print('train_custom_dataset images: ',len(train_custom_dataset), 'test_custom_dataset images: ',len(test_custom_dataset))

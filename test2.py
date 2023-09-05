@@ -71,5 +71,5 @@ loader = paddle.io.DataLoader(dataset,
 train(layer, loader, loss_fn, adam)
 
 # save
-path = "./output/linear"
+path = "../output/linear"
 paddle.jit.save(layer, path)
