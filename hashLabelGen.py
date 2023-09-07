@@ -9,6 +9,7 @@ Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查�
 import os
 import h5py
 import paddle
+from paddle.vision.transforms import Normalize
 from dataset import MyDataset
 from tqdm import tqdm
 import numpy as np
@@ -32,7 +33,8 @@ def build_dataset(filepath):
     # *also it needs to be converted to float32
     train_image = np.transpose(train_image.astype('float32'), (0, 3, 1, 2))
     train_label = h5data['label'][()]
-    train_set = MyDataset(train_image, train_label)
+    transform = Normalize(mean=[127.5], std=[127.5])
+    train_set = MyDataset(train_image, train_label, transform=transform)
 
     return train_set
 
@@ -41,14 +43,15 @@ def extract_feature(train_set, filepath):
     extract and store features using vgg16
     '''    
     # define & initialize the data loader
-    data_loader = paddle.io.DataLoader(train_set, batch_size=32, shuffle=True, num_workers=1, drop_last=False)
+    # ! shuffle to False 
+    data_loader = paddle.io.DataLoader(train_set, batch_size=32, shuffle=False, num_workers=1, drop_last=False)
     vgg16 = paddle.vision.models.vgg16(pretrained=True)
     features = []
     # call the DataLoader to read data iteratively
     for batch_id, data in enumerate(tqdm(data_loader(), desc="extracting feature")):
         images, labels = data
         feature = vgg16(images)
-        # !remember to move the extracted features from gpu memory to main memory or gpu memory will run out
+        # !move the extracted features from gpu memory to main memory or gpu memory will run out
         feature = paddle.Tensor(feature).detach().cpu().numpy()
         features.extend(feature)
 

@@ -11,6 +11,8 @@ from tqdm import tqdm
 h, w, c = [64, 64, 3]
 batch_size = 64
 EPOCH_NUM = 200
+learning_rate = 0.0002
+train_size = 25000
 dsthModel = DSTH(h, w, c)
 # * print the structural information of the model
 print(paddle.summary(dsthModel, (batch_size, c, h, w)))
@@ -18,11 +20,12 @@ print(paddle.summary(dsthModel, (batch_size, c, h, w)))
 path = "../datasets/NWPU-RESISC45/train"
 train_set = utils.build_trainset(path)
 data_loader = paddle.io.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False)
-opt = paddle.optimizer.Adam(learning_rate=0.0002, parameters=dsthModel.parameters())
+opt = paddle.optimizer.Adam(learning_rate=learning_rate, parameters=dsthModel.parameters())
 avg_loss = 0.0
 for epoch_id in range(EPOCH_NUM):
+    avg_loss_epoch = 0.0
     for batch_id, data in enumerate(tqdm(data_loader(), 
-                                         desc="Epoch {}/{} [loss: {:.7f}]".format(epoch_id, EPOCH_NUM, float(avg_loss)))):
+                                         desc="Epoch {}/{} [loss: {:.7f}]".format(epoch_id, EPOCH_NUM, float(avg_loss_epoch)))):
         images, labels = data
         
         # * resize the data
@@ -39,6 +42,7 @@ for epoch_id in range(EPOCH_NUM):
         # * compute the loss
         loss = paddle.nn.functional.pairwise_distance(predicts, paddle.cast(labels, dtype='float32'))
         avg_loss = paddle.mean(loss)
+        avg_loss_epoch += paddle.sum(loss)
         # CrossEntropyLoss = paddle.nn.CrossEntropyLoss(soft_label=True)
         # avg_loss = CrossEntropyLoss(predicts, labels)
         
@@ -46,6 +50,7 @@ for epoch_id in range(EPOCH_NUM):
         avg_loss.backward()
         opt.step()
         opt.clear_grad()
+    avg_loss_epoch = avg_loss_epoch / train_size
 
 # * save
 path = "../output/dsth"

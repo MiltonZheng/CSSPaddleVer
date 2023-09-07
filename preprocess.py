@@ -32,7 +32,7 @@ test_label = []
 
 
 def read_1_image_n_label(index):
-    # *标签序号，按照labels中的顺序来，这里单独用变量是因为还要在train/test_label里面保存
+    # *标签序号，按照labels中的顺序来
     label_num = math.floor(index / num_per_class)
     # *标签
     label_ = labels[label_num]
