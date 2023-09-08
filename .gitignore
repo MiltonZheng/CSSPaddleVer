@@ -1,0 +1,6 @@
+pretrained_models/
+output/
+merge.pdf
+nohup.out
+__pycache__/
+test.py

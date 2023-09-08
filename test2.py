@@ -1,75 +1,43 @@
-'''
-Author: MiltonZheng zheng12238@gmail.com
-Date: 2023-08-24 15:20:58
-LastEditors: MiltonZheng zheng12238@gmail.com
-LastEditTime: 2023-08-24 15:21:07
-FilePath: \CSSPaddleVer\test2.py
-Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
-'''
-# example 1: save layer
-import numpy as np
+import os
 import paddle
-import paddle.nn as nn
-import paddle.optimizer as opt
+import numpy as np
+from tqdm import tqdm
+from paddle.io import DataLoader
+from clip import tokenize, load_model
+from paddle.vision.datasets import Cifar100
+from sklearn.linear_model import LogisticRegression
 
-BATCH_SIZE = 16
-BATCH_NUM = 4
-EPOCH_NUM = 4
+# Load the model
+model, transforms = load_model('ViT_B_32', pretrained=True)
 
-IMAGE_SIZE = 784
-CLASS_NUM = 10
+# Load the dataset
+train = Cifar100(mode='train', transform=transforms, backend='pil')
+test = Cifar100(mode='test', transform=transforms, backend='pil')
 
-# define a random dataset
-class RandomDataset(paddle.io.Dataset):
-    def __init__(self, num_samples):
-        self.num_samples = num_samples
+# Get features
+def get_features(dataset):
+    all_features = []
+    all_labels = []
+    
+    with paddle.no_grad():
+        for images, labels in tqdm(DataLoader(dataset, batch_size=100)):
+            features = model.encode_image(images)
+            all_features.append(features)
+            all_labels.append(labels)
 
-    def __getitem__(self, idx):
-        image = np.random.random([IMAGE_SIZE]).astype('float32')
-        label = np.random.randint(0, CLASS_NUM - 1, (1, )).astype('int64')
-        return image, label
+    return paddle.concat(all_features).numpy(), paddle.concat(all_labels).numpy()
 
-    def __len__(self):
-        return self.num_samples
+# Calculate the image features
+train_features, train_labels = get_features(train)
+test_features, test_labels = get_features(test)
 
-class LinearNet(nn.Layer):
-    def __init__(self):
-        super().__init__()
-        self._linear = nn.Linear(IMAGE_SIZE, CLASS_NUM)
+# Perform logistic regression
+classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=0)
+classifier.fit(train_features, train_labels)
 
-    @paddle.jit.to_static
-    def forward(self, x):
-        return self._linear(x)
+# Evaluate using the logistic regression classifier
+predictions = classifier.predict(test_features)
+accuracy = np.mean((test_labels == predictions).astype(np.float)) * 100.
 
-def train(layer, loader, loss_fn, opt):
-    for epoch_id in range(EPOCH_NUM):
-        for batch_id, (image, label) in enumerate(loader()):
-            out = layer(image)
-            loss = loss_fn(out, label)
-            loss.backward()
-            opt.step()
-            opt.clear_grad()
-            print("Epoch {} batch {}: loss = {}".format(
-                epoch_id, batch_id, np.mean(float(loss))))
-
-# 1. train & save model.
-
-# create network
-layer = LinearNet()
-loss_fn = nn.CrossEntropyLoss()
-adam = opt.Adam(learning_rate=0.001, parameters=layer.parameters())
-
-# create data loader
-dataset = RandomDataset(BATCH_NUM * BATCH_SIZE)
-loader = paddle.io.DataLoader(dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=True,
-    drop_last=True,
-    num_workers=2)
-
-# train
-train(layer, loader, loss_fn, adam)
-
-# save
-path = "../output/linear"
-paddle.jit.save(layer, path)
+# Print the result
+print(f"Accuracy = {accuracy:.3f}")

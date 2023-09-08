@@ -16,7 +16,7 @@ import h5py
 
 h, w, c = [64, 64, 3]
 batch_size = 64
-path = "../output/dsth"
+path = "./output/dsth"
 dsthModel = paddle.jit.load(path)
 dsthModel.eval()
 

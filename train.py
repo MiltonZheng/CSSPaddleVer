@@ -53,5 +53,5 @@ for epoch_id in range(EPOCH_NUM):
     avg_loss_epoch = avg_loss_epoch / train_size
 
 # * save
-path = "../output/dsth"
+path = "./output/dsth"
 paddle.jit.save(dsthModel, path)
