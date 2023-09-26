@@ -62,13 +62,13 @@ def extract_feature(train_set, filepath):
     features_h5.create_dataset("features", data=features)
     features_h5.close()
 
-def create_hashtags(filepath, bits=48, nei=10):
+def create_hashtags(filepath, bits=48, nei=100):
     featuresfile = h5py.File(os.path.join(filepath, 'features.hy'), 'r')
     features = featuresfile["features"][()]
     print("features size:{}".format(features.shape))
     print("decompose features...")
-    # features_pca = manifold.SpectralEmbedding(n_components=bits, n_neighbors=nei).fit_transform(features)
-    features_pca = decomposition.PCA(n_components=bits).fit_transform(features)
+    features_pca = manifold.SpectralEmbedding(n_components=bits, n_neighbors=nei).fit_transform(features)
+    # features_pca = decomposition.PCA(n_components=bits).fit_transform(features)
     hashtags = features_pca >= 0
     hashtags = hashtags.astype(np.int32)
     print(hashtags.shape)

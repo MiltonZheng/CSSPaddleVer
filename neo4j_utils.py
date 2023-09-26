@@ -4,8 +4,8 @@ from neo4j import GraphDatabase, basic_auth
 import datetime
 import os
 
-neo4j_uri = "bolt://127.0.0.1:7687"
-driver = GraphDatabase.driver(neo4j_uri, auth=basic_auth("neo4j", "123456"))
+neo4j_url = "bolt://192.168.254.249:7687"
+driver = GraphDatabase.driver(neo4j_url, auth=basic_auth("neo4j", "123456"))
 
 
 # @cache.cached()
